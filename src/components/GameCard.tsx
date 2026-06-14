@@ -1,14 +1,15 @@
 "use client"
-import { Trash2, Package, Download } from "lucide-react"
+import { Trash2, Package, Download, Pencil } from "lucide-react"
 import type { Game, SwitchAccount } from "@/lib/db/schema"
 import Image from "next/image"
 
 interface Props {
   game: Game & { switchAccount?: SwitchAccount | null }
   onDelete: (id: string) => void
+  onEdit: (game: Game & { switchAccount?: SwitchAccount | null }) => void
 }
 
-export function GameCard({ game, onDelete }: Props) {
+export function GameCard({ game, onDelete, onEdit }: Props) {
   const isPhysical = game.format === "physical"
 
   return (
@@ -73,12 +74,20 @@ export function GameCard({ game, onDelete }: Props) {
               </span>
             )}
           </div>
-          <button
-            onClick={() => onDelete(game.id)}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onEdit(game)}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onDelete(game.id)}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

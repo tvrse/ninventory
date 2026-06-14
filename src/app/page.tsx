@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { AddGameDialog } from "@/components/AddGameDialog"
+import { EditGameDialog } from "@/components/EditGameDialog"
 import { GameCard } from "@/components/GameCard"
 import { Input } from "@/components/ui/input"
 import { Search, Gamepad2, Package, Download, Wallet, Menu } from "lucide-react"
@@ -21,6 +22,7 @@ export default function Home() {
   const [accounts, setAccounts] = useState<SwitchAccount[]>([])
   const [filter, setFilter] = useState("all")
   const [search, setSearch] = useState("")
+  const [editingGame, setEditingGame] = useState<GameWithAccount | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login")
@@ -75,6 +77,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      {editingGame && (
+        <EditGameDialog
+          game={editingGame}
+          accounts={accounts}
+          open={!!editingGame}
+          onClose={() => setEditingGame(null)}
+          onSaved={loadGames}
+        />
+      )}
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -162,28 +173,30 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Per-account spending */}
+        {/* Per-account spending — horizontal scroll chips */}
         {accountStats.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">By Account</p>
-            {accountStats.map(a => (
-              <div key={a.id} className="bg-card rounded-2xl px-4 py-3 shadow-sm border border-border flex items-center gap-3">
-                <span
-                  className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-extrabold text-sm"
-                  style={{ background: a.iconColor }}
+            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
+              {accountStats.map(a => (
+                <div
+                  key={a.id}
+                  className="flex-shrink-0 bg-card rounded-2xl px-4 py-3 shadow-sm border border-border flex items-center gap-2.5 min-w-[160px] max-w-[200px]"
                 >
-                  {a.name.charAt(0).toUpperCase()}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-foreground">{a.name}</p>
-                  {a.email && <p className="text-xs text-muted-foreground truncate">{a.email}</p>}
+                  <span
+                    className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-white font-extrabold text-sm"
+                    style={{ background: a.iconColor }}
+                  >
+                    {a.name.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-foreground truncate">{a.name}</p>
+                    <p className="font-extrabold text-sm" style={{ color: "#E60012" }}>฿{a.spent.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{a.count} game{a.count !== 1 ? "s" : ""}</p>
+                  </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="font-extrabold text-sm" style={{ color: "#E60012" }}>฿{a.spent.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{a.count} game{a.count !== 1 ? "s" : ""}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
@@ -239,7 +252,7 @@ export default function Home() {
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">
               {filtered.length} game{filtered.length !== 1 ? "s" : ""}
             </p>
-            {filtered.map(g => <GameCard key={g.id} game={g} onDelete={deleteGame} />)}
+            {filtered.map(g => <GameCard key={g.id} game={g} onDelete={deleteGame} onEdit={setEditingGame} />)}
           </div>
         )}
       </main>
