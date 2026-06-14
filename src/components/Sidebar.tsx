@@ -2,7 +2,7 @@
 import { useSession, signOut } from "next-auth/react"
 import { useTheme } from "@/components/ThemeProvider"
 import { ManageAccountsDialog } from "@/components/ManageAccountsDialog"
-import { X, Home, Sun, Moon, LogOut, UserCog, Gamepad2 } from "lucide-react"
+import { X, Sun, Moon, LogOut, UserCog, Gamepad2 } from "lucide-react"
 import Link from "next/link"
 import type { SwitchAccount } from "@/lib/db/schema"
 
@@ -62,15 +62,6 @@ export function Sidebar({ open, onClose, accounts, onAccountsChanged }: Props) {
 
         {/* Nav items */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <Link
-            href="/"
-            onClick={onClose}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-foreground hover:bg-muted transition-colors font-semibold text-sm"
-          >
-            <Home className="w-4 h-4 text-muted-foreground" />
-            Home
-          </Link>
-
           {/* Manage Switch Accounts */}
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted transition-colors font-semibold text-sm text-foreground cursor-pointer">
             <Gamepad2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
