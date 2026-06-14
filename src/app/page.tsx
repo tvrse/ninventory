@@ -6,8 +6,9 @@ import { AddGameDialog } from "@/components/AddGameDialog"
 import { ManageAccountsDialog } from "@/components/ManageAccountsDialog"
 import { GameCard } from "@/components/GameCard"
 import { Input } from "@/components/ui/input"
-import { LogOut, Search, Gamepad2, Package, Download, Wallet, Sun, Moon } from "lucide-react"
+import { LogOut, Search, Gamepad2, Package, Download, Wallet, Sun, Moon, UserCog } from "lucide-react"
 import { useTheme } from "@/components/ThemeProvider"
+import Link from "next/link"
 import type { Game, SwitchAccount } from "@/lib/db/schema"
 
 type GameWithAccount = Game & { switchAccount?: SwitchAccount | null }
@@ -88,6 +89,9 @@ export default function Home() {
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
+            <Link href="/settings" className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors">
+              <UserCog className="w-4 h-4" />
+            </Link>
             <ManageAccountsDialog accounts={accounts} onChanged={loadAccounts} />
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
