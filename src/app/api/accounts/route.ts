@@ -26,6 +26,20 @@ export async function POST(req: Request) {
   return NextResponse.json(account, { status: 201 })
 }
 
+export async function PATCH(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { id, name, email, iconColor } = await req.json()
+  const { and } = await import("drizzle-orm")
+  const [updated] = await db
+    .update(switchAccounts)
+    .set({ name, email: email ?? null, iconColor })
+    .where(and(eq(switchAccounts.id, id), eq(switchAccounts.userId, session.user.id)))
+    .returning()
+  return NextResponse.json(updated)
+}
+
 export async function DELETE(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
