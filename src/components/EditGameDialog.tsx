@@ -23,24 +23,34 @@ export function EditGameDialog({ game, accounts, open, onClose, onSaved }: Props
   )
   const [notes, setNotes] = useState(game.notes ?? "")
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
 
   async function save() {
+    setError("")
     setSaving(true)
-    const res = await fetch(`/api/games/${game.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        format,
-        switchAccountId: format === "digital" && accountId ? accountId : null,
-        purchasePrice: price !== "" ? price : null,
-        purchaseDate: date ? new Date(date).toISOString() : null,
-        notes: notes.trim() || null,
-      }),
-    })
-    setSaving(false)
-    if (res.ok) {
-      onSaved()
-      onClose()
+    try {
+      const res = await fetch(`/api/games/${game.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          format,
+          switchAccountId: format === "digital" && accountId ? accountId : null,
+          purchasePrice: price !== "" ? price : null,
+          purchaseDate: date || null,
+          notes: notes.trim() || null,
+        }),
+      })
+      if (res.ok) {
+        onSaved()
+        onClose()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error ?? `Server error ${res.status}`)
+      }
+    } catch (e) {
+      setError("Network error — please try again")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -143,6 +153,8 @@ export function EditGameDialog({ game, accounts, open, onClose, onSaved }: Props
               className="w-full px-3 py-2.5 rounded-xl text-sm bg-muted border border-border text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-[#E60012]/50"
             />
           </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
           <button
             onClick={save}

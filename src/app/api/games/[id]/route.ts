@@ -16,11 +16,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { id } = await params
-  const body = await req.json()
-  const [updated] = await db
-    .update(games)
-    .set(body)
-    .where(and(eq(games.id, id), eq(games.userId, session.user.id)))
-    .returning()
-  return NextResponse.json(updated)
+  try {
+    const { format, switchAccountId, purchasePrice, purchaseDate, notes } = await req.json()
+    const [updated] = await db
+      .update(games)
+      .set({
+        format,
+        switchAccountId: switchAccountId ?? null,
+        purchasePrice: purchasePrice != null ? String(purchasePrice) : null,
+        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
+        notes: notes ?? null,
+      })
+      .where(and(eq(games.id, id), eq(games.userId, session.user.id)))
+      .returning()
+    return NextResponse.json(updated)
+  } catch (e) {
+    console.error("PATCH game error:", e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }

@@ -23,14 +23,17 @@ export default function Home() {
   const [filter, setFilter] = useState("all")
   const [search, setSearch] = useState("")
   const [editingGame, setEditingGame] = useState<GameWithAccount | null>(null)
+  const [gamesLoading, setGamesLoading] = useState(true)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login")
   }, [status, router])
 
   async function loadGames() {
+    setGamesLoading(true)
     const res = await fetch("/api/games")
     if (res.ok) setGames(await res.json())
+    setGamesLoading(false)
   }
 
   async function loadAccounts() {
@@ -239,7 +242,13 @@ export default function Home() {
         </div>
 
         {/* Game List */}
-        {filtered.length === 0 ? (
+        {gamesLoading ? (
+          <div className="space-y-2.5">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-[90px] bg-card border border-border rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-20 h-20 rounded-full bg-card border border-border flex items-center justify-center mx-auto mb-4">
               <Gamepad2 className="w-9 h-9 text-muted-foreground" />
