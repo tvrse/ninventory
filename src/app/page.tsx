@@ -1,65 +1,248 @@
-import Image from "next/image";
+"use client"
+import { useEffect, useState } from "react"
+import { useSession, signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { AddGameDialog } from "@/components/AddGameDialog"
+import { ManageAccountsDialog } from "@/components/ManageAccountsDialog"
+import { GameCard } from "@/components/GameCard"
+import { Input } from "@/components/ui/input"
+import { LogOut, Search, Gamepad2, Package, Download, Wallet, Sun, Moon } from "lucide-react"
+import { useTheme } from "@/components/ThemeProvider"
+import type { Game, SwitchAccount } from "@/lib/db/schema"
+
+type GameWithAccount = Game & { switchAccount?: SwitchAccount | null }
 
 export default function Home() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const { theme, toggle } = useTheme()
+  const [games, setGames] = useState<GameWithAccount[]>([])
+  const [accounts, setAccounts] = useState<SwitchAccount[]>([])
+  const [filter, setFilter] = useState("all")
+  const [search, setSearch] = useState("")
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login")
+  }, [status, router])
+
+  async function loadGames() {
+    const res = await fetch("/api/games")
+    if (res.ok) setGames(await res.json())
+  }
+
+  async function loadAccounts() {
+    const res = await fetch("/api/accounts")
+    if (res.ok) setAccounts(await res.json())
+  }
+
+  useEffect(() => {
+    if (status === "authenticated") { loadGames(); loadAccounts() }
+  }, [status])
+
+  async function deleteGame(id: string) {
+    await fetch(`/api/games/${id}`, { method: "DELETE" })
+    setGames(g => g.filter(x => x.id !== id))
+  }
+
+  if (status === "loading" || status === "unauthenticated") return null
+
+  const filtered = games.filter(g => {
+    if (search && !g.title.toLowerCase().includes(search.toLowerCase())) return false
+    if (filter === "physical") return g.format === "physical"
+    if (filter === "digital") return g.format === "digital"
+    if (filter.startsWith("account:")) return g.switchAccountId === filter.slice(8)
+    return true
+  })
+
+  const totalSpent = games.reduce((sum, g) => sum + (g.purchasePrice ? Number(g.purchasePrice) : 0), 0)
+  const physicalSpent = games.filter(g => g.format === "physical").reduce((sum, g) => sum + (g.purchasePrice ? Number(g.purchasePrice) : 0), 0)
+  const digitalSpent = games.filter(g => g.format === "digital").reduce((sum, g) => sum + (g.purchasePrice ? Number(g.purchasePrice) : 0), 0)
+  const physicalCount = games.filter(g => g.format === "physical").length
+  const digitalCount = games.filter(g => g.format === "digital").length
+  const accountStats = accounts.map(a => ({
+    ...a,
+    count: games.filter(g => g.switchAccountId === a.id).length,
+    spent: games.filter(g => g.switchAccountId === a.id).reduce((sum, g) => sum + (g.purchasePrice ? Number(g.purchasePrice) : 0), 0),
+  }))
+
+  const filterTabs = [
+    { value: "all", label: "All" },
+    { value: "physical", label: "Physical" },
+    { value: "digital", label: "Digital" },
+    ...accounts.map(a => ({ value: `account:${a.id}`, label: a.name, color: a.iconColor })),
+  ]
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-[#E60012] shadow-lg">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Gamepad2 className="w-5 h-5 text-white" />
+            <span className="font-bold text-white text-base tracking-wide">Ninventory</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggle}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <ManageAccountsDialog accounts={accounts} onChanged={loadAccounts} />
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
             >
-              Learning
-            </a>{" "}
-            center.
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto px-4 py-5 space-y-4">
+
+        {/* Hero — Total Spent */}
+        <div
+          className="rounded-2xl p-5 text-white shadow-xl"
+          style={{ background: "linear-gradient(160deg, #1c1c1e 0%, #2c2c2e 100%)" }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet className="w-4 h-4 text-white/40" />
+            <span className="text-white/40 text-xs font-bold uppercase tracking-widest">Total Spent</span>
+          </div>
+          <p className="text-5xl font-extrabold tracking-tight">
+            ฿{totalSpent.toLocaleString()}
           </p>
+          <div className="flex items-center gap-5 mt-5 pt-4 border-t border-white/10">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
+                <Package className="w-3.5 h-3.5 text-white/50" />
+              </div>
+              <div>
+                <p className="text-white/40 text-xs">Physical</p>
+                <p className="text-white font-bold text-sm">฿{physicalSpent.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="w-px h-8 bg-white/10" />
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
+                <Download className="w-3.5 h-3.5 text-white/50" />
+              </div>
+              <div>
+                <p className="text-white/40 text-xs">Digital</p>
+                <p className="text-white font-bold text-sm">฿{digitalSpent.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-white/40 text-xs">Collection</p>
+              <p className="text-white font-bold text-sm">{games.length} game{games.length !== 1 ? "s" : ""}</p>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-card rounded-2xl p-4 shadow-sm flex items-center gap-3 border border-border">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-muted">
+              <Package className="w-5 h-5" style={{ color: "#E60012" }} />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-foreground">{physicalCount}</p>
+              <p className="text-xs text-muted-foreground font-semibold">Physical</p>
+            </div>
+          </div>
+          <div className="bg-card rounded-2xl p-4 shadow-sm flex items-center gap-3 border border-border">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-muted">
+              <Download className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold text-foreground">{digitalCount}</p>
+              <p className="text-xs text-muted-foreground font-semibold">Digital</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Per-account spending */}
+        {accountStats.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">By Account</p>
+            {accountStats.map(a => (
+              <div key={a.id} className="bg-card rounded-2xl px-4 py-3 shadow-sm border border-border flex items-center gap-3">
+                <span
+                  className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-extrabold text-sm"
+                  style={{ background: a.iconColor }}
+                >
+                  {a.name.charAt(0).toUpperCase()}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-foreground">{a.name}</p>
+                  {a.email && <p className="text-xs text-muted-foreground truncate">{a.email}</p>}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-extrabold text-sm" style={{ color: "#E60012" }}>฿{a.spent.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{a.count} game{a.count !== 1 ? "s" : ""}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Search + Add */}
+        <div className="flex gap-2 pt-1">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              className="pl-9 bg-card border-border rounded-xl h-11 text-foreground placeholder:text-muted-foreground"
+              placeholder="Search your games…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+          <AddGameDialog accounts={accounts} onAdded={loadGames} />
         </div>
+
+        {/* Filter Pills */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {filterTabs.map(f => {
+            const active = filter === f.value
+            return (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                  active
+                    ? "text-white border-transparent shadow-md"
+                    : "bg-card text-muted-foreground border-border hover:text-foreground"
+                }`}
+                style={active ? { background: "#E60012", borderColor: "#E60012" } : {}}
+              >
+                {"color" in f && (
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: f.color as string }} />
+                )}
+                {f.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Game List */}
+        {filtered.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-20 h-20 rounded-full bg-card border border-border flex items-center justify-center mx-auto mb-4">
+              <Gamepad2 className="w-9 h-9 text-muted-foreground" />
+            </div>
+            <p className="font-bold text-foreground">No games found</p>
+            <p className="text-sm text-muted-foreground mt-1">Tap &quot;Add Game&quot; to start your collection</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5 pb-6">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">
+              {filtered.length} game{filtered.length !== 1 ? "s" : ""}
+            </p>
+            {filtered.map(g => <GameCard key={g.id} game={g} onDelete={deleteGame} />)}
+          </div>
+        )}
       </main>
     </div>
-  );
+  )
 }
