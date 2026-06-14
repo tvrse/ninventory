@@ -1,14 +1,13 @@
 "use client"
 import { useEffect, useState } from "react"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { AddGameDialog } from "@/components/AddGameDialog"
-import { ManageAccountsDialog } from "@/components/ManageAccountsDialog"
 import { GameCard } from "@/components/GameCard"
 import { Input } from "@/components/ui/input"
-import { LogOut, Search, Gamepad2, Package, Download, Wallet, Sun, Moon, UserCog } from "lucide-react"
+import { Search, Gamepad2, Package, Download, Wallet, Menu } from "lucide-react"
 import { useTheme } from "@/components/ThemeProvider"
-import Link from "next/link"
+import { Sidebar } from "@/components/Sidebar"
 import type { Game, SwitchAccount } from "@/lib/db/schema"
 
 type GameWithAccount = Game & { switchAccount?: SwitchAccount | null }
@@ -17,6 +16,7 @@ export default function Home() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { theme, toggle } = useTheme()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [games, setGames] = useState<GameWithAccount[]>([])
   const [accounts, setAccounts] = useState<SwitchAccount[]>([])
   const [filter, setFilter] = useState("all")
@@ -75,31 +75,27 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        accounts={accounts}
+        onAccountsChanged={loadAccounts}
+      />
+
       {/* Header */}
       <header className="sticky top-0 z-20 bg-[#E60012] shadow-lg">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
             <Gamepad2 className="w-5 h-5 text-white" />
-            <span className="font-bold text-white text-base tracking-wide">Ninventory</span>
+            <span className="font-extrabold text-white text-base tracking-wide">Ninventory</span>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={toggle}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
-            >
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <Link href="/settings" className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors">
-              <UserCog className="w-4 h-4" />
-            </Link>
-            <ManageAccountsDialog accounts={accounts} onChanged={loadAccounts} />
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          <div className="w-9" />
         </div>
       </header>
 

@@ -12,9 +12,10 @@ const COLORS = ["#E60012", "#0070CC", "#1DB954", "#FF9500", "#9B59B6", "#E67E22"
 interface Props {
   accounts: SwitchAccount[]
   onChanged: () => void
+  trigger?: React.ReactNode
 }
 
-export function ManageAccountsDialog({ accounts, onChanged }: Props) {
+export function ManageAccountsDialog({ accounts, onChanged, trigger }: Props) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -47,8 +48,8 @@ export function ManageAccountsDialog({ accounts, onChanged }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/20 transition-colors">
-        <Settings className="w-4 h-4" />
+      <DialogTrigger className={trigger ? "w-full text-left" : "p-2 rounded-full text-white/80 hover:text-white hover:bg-white/20 transition-colors"}>
+        {trigger ?? <Settings className="w-4 h-4" />}
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
