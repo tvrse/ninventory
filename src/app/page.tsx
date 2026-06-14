@@ -83,7 +83,7 @@ export default function Home() {
           accounts={accounts}
           open={!!editingGame}
           onClose={() => setEditingGame(null)}
-          onSaved={loadGames}
+          onSaved={() => { loadGames(); setFilter("all") }}
         />
       )}
       <Sidebar

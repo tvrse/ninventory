@@ -26,7 +26,7 @@ export function EditGameDialog({ game, accounts, open, onClose, onSaved }: Props
 
   async function save() {
     setSaving(true)
-    await fetch(`/api/games/${game.id}`, {
+    const res = await fetch(`/api/games/${game.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -38,8 +38,10 @@ export function EditGameDialog({ game, accounts, open, onClose, onSaved }: Props
       }),
     })
     setSaving(false)
-    onSaved()
-    onClose()
+    if (res.ok) {
+      onSaved()
+      onClose()
+    }
   }
 
   return (
